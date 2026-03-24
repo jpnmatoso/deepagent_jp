@@ -16,16 +16,11 @@ from dotenv import load_dotenv
 
 load_dotenv(AGENT_DIR / ".env")
 
-from planning_agent.prompts import PLANNING_WORKFLOW_INSTRUCTIONS
-from planning_agent.tools import (
-    tavily_search,
-    think_tool,
-    projects_manager,
-    tasks_manager,
-    documents_manager,
-)
+PROMPTS_DIR = AGENT_DIR / "agent/prompts"
+PLANNING_PROMPT_PATH = PROMPTS_DIR / "system_prompt_planning_agent.md"
 
-INSTRUCTIONS = PLANNING_WORKFLOW_INSTRUCTIONS + "\n\n" + "=" * 80 + "\n\n"
+from tools import tavily_search, think_tool
+from tools.jp_bdc_tools import projects_manager, tasks_manager, documents_manager
 
 model = init_chat_model(
     "stepfun/step-3.5-flash", model_provider="openai", temperature=0.0
@@ -35,7 +30,7 @@ backend = lambda rt: CompositeBackend(
     default=FilesystemBackend(root_dir=str(AGENT_DIR), virtual_mode=True),
     routes={
         "/skills/": FilesystemBackend(
-            root_dir=str(AGENT_DIR / "skills"), virtual_mode=True
+            root_dir=str(AGENT_DIR / "agent/skills"), virtual_mode=True
         ),
     },
 )
@@ -51,5 +46,5 @@ graph = create_deep_agent(
     ],
     backend=backend,
     skills=["/skills/"],
-    system_prompt=INSTRUCTIONS,
+    system_prompt=PLANNING_PROMPT_PATH.read_text(),
 )

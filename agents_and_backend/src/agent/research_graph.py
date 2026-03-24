@@ -21,7 +21,8 @@ from research_agent.prompts import (
     RESEARCH_WORKFLOW_INSTRUCTIONS,
     SUBAGENT_DELEGATION_INSTRUCTIONS,
 )
-from research_agent.tools import save_markdown_report, tavily_search, think_tool
+from research_agent.tools import save_markdown_report
+from tools import tavily_search, think_tool
 
 max_concurrent_research_units = 3
 max_researcher_iterations = 3

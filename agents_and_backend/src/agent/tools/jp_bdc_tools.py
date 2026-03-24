@@ -1,17 +1,14 @@
-"""Planning Tools.
+"""JP BDC Tools.
 
-This module provides tools for the planning agent.
+This module provides tools for interacting with the JP BDC API.
+Used by multiple agents to manage projects, tasks, and documents.
 """
 
 import os
 
 import httpx
 from langchain_core.tools import InjectedToolArg, tool
-from markdownify import markdownify
-from tavily import TavilyClient
 from typing_extensions import Annotated, Literal
-
-tavily_client = TavilyClient()
 
 BDC_BASE_URL = os.getenv("BDC_BASE_URL", "http://localhost:8100")
 
@@ -28,62 +25,6 @@ def _get_bdc_headers() -> dict:
     response.raise_for_status()
     token = response.json()["token"]
     return {"Authorization": f"Bearer {token}"}
-
-
-def fetch_webpage_content(url: str, timeout: float = 10.0) -> str:
-    """Fetch and convert webpage content to markdown."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-
-    try:
-        response = httpx.get(url, headers=headers, timeout=timeout)
-        response.raise_for_status()
-        return markdownify(response.text)
-    except Exception as e:
-        return f"Error fetching content from {url}: {str(e)}"
-
-
-@tool()
-def tavily_search(
-    query: str,
-    max_results: Annotated[int, InjectedToolArg] = 1,
-    topic: Annotated[
-        Literal["general", "news", "finance"], InjectedToolArg
-    ] = "general",
-) -> str:
-    """Search the web for information on a given query."""
-    search_results = tavily_client.search(
-        query,
-        max_results=max_results,
-        topic=topic,
-    )
-
-    result_texts = []
-    for result in search_results.get("results", []):
-        url = result["url"]
-        title = result["title"]
-        content = fetch_webpage_content(url)
-        result_text = f"""## {title}
-**URL:** {url}
-
-{content}
-
----
-"""
-        result_texts.append(result_text)
-
-    response = f"""🔍 Found {len(result_texts)} result(s) for '{query}':
-
-{chr(10).join(result_texts)}"""
-
-    return response
-
-
-@tool()
-def think_tool(reflection: str) -> str:
-    """Tool for strategic reflection on research progress and decision-making."""
-    return f"Reflection recorded: {reflection}"
 
 
 def _normalize_task_status(status: str) -> str:
@@ -106,6 +47,44 @@ def _normalize_task_status(status: str) -> str:
         "failed": "failure",
     }
     return status_map.get(normalized, status)
+
+
+def _normalize_document_status(status: str) -> str:
+    """Normalize document status to API format."""
+    normalized = status.lower().strip()
+    status_map = {
+        "publicado": "published",
+        "published": "published",
+        "rascunho": "draft",
+        "draft": "draft",
+        "arquivado": "archived",
+        "archived": "archived",
+    }
+    return status_map.get(normalized, status)
+
+
+def _normalize_tags(tags_input: str | list[str] | None) -> list[str] | None:
+    """Normalize tags to a list of strings."""
+    import json
+
+    if tags_input is None:
+        return None
+    if isinstance(tags_input, list):
+        return [t.strip() for t in tags_input if t.strip()]
+    if isinstance(tags_input, str):
+        tags_input = tags_input.strip()
+        if not tags_input:
+            return None
+        if tags_input.startswith("["):
+            try:
+                parsed = json.loads(tags_input)
+                if isinstance(parsed, list):
+                    return [t.strip() for t in parsed if t.strip()]
+            except (json.JSONDecodeError, ValueError):
+                pass
+        tags = [t.strip() for t in tags_input.split(",") if t.strip()]
+        return tags if tags else None
+    return None
 
 
 @tool()
@@ -475,44 +454,6 @@ def tasks_manager(
         return f"Search results ({len(tasks)}):\n" + "\n".join(result_lines)
 
     return f"Unknown action: {action}"
-
-
-def _normalize_document_status(status: str) -> str:
-    """Normalize document status to API format."""
-    normalized = status.lower().strip()
-    status_map = {
-        "publicado": "published",
-        "published": "published",
-        "rascunho": "draft",
-        "draft": "draft",
-        "arquivado": "archived",
-        "archived": "archived",
-    }
-    return status_map.get(normalized, status)
-
-
-def _normalize_tags(tags_input: str | list[str] | None) -> list[str] | None:
-    """Normalize tags to a list of strings."""
-    import json
-
-    if tags_input is None:
-        return None
-    if isinstance(tags_input, list):
-        return [t.strip() for t in tags_input if t.strip()]
-    if isinstance(tags_input, str):
-        tags_input = tags_input.strip()
-        if not tags_input:
-            return None
-        if tags_input.startswith("["):
-            try:
-                parsed = json.loads(tags_input)
-                if isinstance(parsed, list):
-                    return [t.strip() for t in parsed if t.strip()]
-            except (json.JSONDecodeError, ValueError):
-                pass
-        tags = [t.strip() for t in tags_input.split(",") if t.strip()]
-        return tags if tags else None
-    return None
 
 
 @tool()
