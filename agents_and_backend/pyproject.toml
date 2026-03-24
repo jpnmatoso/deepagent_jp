@@ -1,0 +1,12 @@
+[project]
+name = "agent-backend-langgraph"
+version = "1.0.0"
+description = "LangGraph Agent Backend"
+requires-python = ">=3.11"
+dependencies = [
+    "-e ../..",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["agent", "agent.planning_agent", "agent.research_agent"]

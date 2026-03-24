@@ -1,0 +1,17 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "planning": "./src/agent/planning_graph.py:graph",
+    "research": "./src/agent/research_graph.py:graph"
+  },
+  "env": ".env",
+  "http": {
+    "app": "./src/agent/webapp.py:app",
+    "cors": {
+      "allow_origins": ["*"],
+      "allow_methods": ["*"],
+      "allow_headers": ["*"],
+      "allow_credentials": true
+    }
+  }
+}
