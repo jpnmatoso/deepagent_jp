@@ -34,3 +34,4 @@ uv.lock
 agents_and_backend/src/agent_backend_langgraph.egg-info
 agents_and_backend/research_outputs/
 agents_and_backend/src/agent/skills/
+agents_and_backend/.langgraph_api/
