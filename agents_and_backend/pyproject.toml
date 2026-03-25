@@ -9,4 +9,4 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["agent", "agent.tools", "agent.planning_agent", "agent.research_agent"]
+packages = ["agent", "agent.tools"]

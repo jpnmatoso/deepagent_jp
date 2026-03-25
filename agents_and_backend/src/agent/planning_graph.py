@@ -16,8 +16,8 @@ from dotenv import load_dotenv
 
 load_dotenv(AGENT_DIR / ".env")
 
-PROMPTS_DIR = AGENT_DIR / "agent/prompts"
-PLANNING_PROMPT_PATH = PROMPTS_DIR / "system_prompt_planning_agent.md"
+PROMPTS_DIR = AGENT_DIR / "agent" / "prompts"
+PLANNING_PROMPT_PATH = PROMPTS_DIR / "planning_agent_system_prompt.md"
 
 from tools import tavily_search, think_tool
 from tools.jp_bdc_tools import projects_manager, tasks_manager, documents_manager

@@ -37,31 +37,35 @@ def tavily_search(
     ] = "general",
 ) -> str:
     """Search the web for information on a given query."""
-    search_results = tavily_client.search(
-        query,
-        max_results=max_results,
-        topic=topic,
-    )
+    query_clean = query.strip()
+
+    if not query_clean:
+        return "Error: Please provide a search query."
+
+    import re
+
+    if re.match(r"^site:\S+(\s+site:\S+)*$", query_clean, re.IGNORECASE):
+        return "Error: Query cannot consist only of 'site:' operators. Please add search terms along with the site operator, e.g., 'site:example.com topic'."
+
+    try:
+        search_results = tavily_client.search(
+            query,
+            max_results=max_results,
+            topic=topic,
+        )
+    except Exception as e:
+        return f"Search error: {str(e)}"
 
     result_texts = []
     for result in search_results.get("results", []):
         url = result["url"]
         title = result["title"]
         content = fetch_webpage_content(url)
-        result_text = f"""## {title}
-**URL:** {url}
+        result_texts.append(f"## {title}\n**URL:** {url}\n\n{content}\n\n---")
 
-{content}
-
----
-"""
-        result_texts.append(result_text)
-
-    response = f"""🔍 Found {len(result_texts)} result(s) for '{query}':
+    return f"""🔍 Found {len(result_texts)} result(s) for '{query}':
 
 {chr(10).join(result_texts)}"""
-
-    return response
 
 
 @tool()

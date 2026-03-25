@@ -16,13 +16,17 @@ from dotenv import load_dotenv
 
 load_dotenv(AGENT_DIR / ".env")
 
-from research_agent.prompts import (
-    RESEARCHER_INSTRUCTIONS,
-    RESEARCH_WORKFLOW_INSTRUCTIONS,
-    SUBAGENT_DELEGATION_INSTRUCTIONS,
-)
-from research_agent.tools import save_markdown_report
+PROMPTS_DIR = AGENT_DIR / "agent" / "prompts"
+RESEARCH_WORKFLOW_PATH = PROMPTS_DIR / "research_agent_system_prompt.md"
+RESEARCHER_PATH = PROMPTS_DIR / "research_agent_researcher_instructions.md"
+SUBAGENT_PATH = PROMPTS_DIR / "research_agent_subagent_delegation_instructions.md"
+
+RESEARCH_WORKFLOW_INSTRUCTIONS = RESEARCH_WORKFLOW_PATH.read_text()
+RESEARCHER_INSTRUCTIONS = RESEARCHER_PATH.read_text()
+SUBAGENT_DELEGATION_INSTRUCTIONS = SUBAGENT_PATH.read_text()
+
 from tools import tavily_search, think_tool
+from tools.save_markdown_report import save_markdown_report
 
 max_concurrent_research_units = 3
 max_researcher_iterations = 3
