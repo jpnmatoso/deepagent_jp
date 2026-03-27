@@ -52,3 +52,9 @@ agents_and_backend/src/agent_backend_langgraph.egg-info
 agents_and_backend/research_outputs/
 agents_and_backend/src/agent/skills/
 agents_and_backend/.langgraph_api/
+
+frontend/.next/
+frontend/node_modules/
+frontend/.vercel
+frontend/.env.local
+frontend/.env.development.local
