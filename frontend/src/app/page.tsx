@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, Suspense } from "react";
+import Link from "next/link";
 import { useQueryState } from "nuqs";
 import { getConfig, saveConfig, StandaloneConfig } from "@/lib/config";
 import { ConfigDialog } from "@/app/components/ConfigDialog";
 import { Button } from "@/components/ui/button";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { ClientProvider, useClient } from "@/providers/ClientProvider";
-import { Settings, MessagesSquare, SquarePen } from "lucide-react";
+import { Settings, MessagesSquare, SquarePen, List } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -136,6 +137,12 @@ function HomePageInner({
               <span className="font-medium">Assistant:</span>{" "}
               {config.assistantId}
             </div>
+            <Link href="/threads">
+              <Button variant="outline" size="sm">
+                <List className="mr-2 h-4 w-4" />
+                All Threads
+              </Button>
+            </Link>
             <Button
               variant="outline"
               size="sm"
