@@ -31,6 +31,23 @@ Thumbs.db
 # 
 uv.lock
 
+# Node.js / Next.js
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+/coverage
+/.next/
+/out/
+/build/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
 agents_and_backend/src/agent_backend_langgraph.egg-info
 agents_and_backend/research_outputs/
 agents_and_backend/src/agent/skills/
