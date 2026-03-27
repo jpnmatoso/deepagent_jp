@@ -1,10 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "agent-backend-langgraph"
 version = "1.0.0"
 description = "LangGraph Agent Backend"
 requires-python = ">=3.11"
 dependencies = [
-    "-e ../..",
+    "fastapi>=0.100.0",
+    "starlette>=0.27.0",
+    "langchain>=0.1.0",
+    "langchain-core>=0.1.0",
+    "langgraph>=0.0.20",
+    "langgraph-cli[inmem]>=0.1.0",
+    "langchain-openai>=0.1.0",
+    "deepagents>=0.4.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.24.0",
+    "markdownify>=0.11.0",
+    "tavily>=0.2.0",
+    "typing-extensions>=4.5.0",
+    "uvicorn>=0.23.0",
 ]
 
 [tool.setuptools]
