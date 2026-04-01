@@ -22,9 +22,8 @@ PLANNING_PROMPT_PATH = PROMPTS_DIR / "planning_agent_system_prompt.md"
 from tools import tavily_search, think_tool
 from tools.jp_bdc_tools import projects_manager, tasks_manager, documents_manager
 
-model = init_chat_model(
-    "stepfun/step-3.5-flash", model_provider="openai", temperature=0.0
-)
+# model = init_chat_model("stepfun/step-3.5-flash", model_provider="openai", temperature=0.0)
+model = init_chat_model("qwen/qwen3.6-plus-preview:free", model_provider="openai", temperature=0.0)
 
 backend = lambda rt: CompositeBackend(
     default=FilesystemBackend(root_dir=str(AGENT_DIR), virtual_mode=True),

@@ -27,6 +27,7 @@ SUBAGENT_DELEGATION_INSTRUCTIONS = SUBAGENT_PATH.read_text()
 
 from tools import tavily_search, think_tool
 from tools.save_markdown_report import save_markdown_report
+from tools.jp_bdc_tools import documents_manager
 
 max_concurrent_research_units = 3
 max_researcher_iterations = 3
@@ -57,7 +58,7 @@ model = init_chat_model(
 
 graph = create_deep_agent(
     model=model,
-    tools=[tavily_search, think_tool, save_markdown_report],
+    tools=[tavily_search, think_tool, save_markdown_report, documents_manager],
     system_prompt=INSTRUCTIONS,
     subagents=[research_sub_agent],
 )

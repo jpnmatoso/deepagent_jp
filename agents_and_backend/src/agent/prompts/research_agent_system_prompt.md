@@ -9,6 +9,16 @@ Follow this workflow for all research requests:
 5. **Write Report**: Write a comprehensive final report to `/final_report.md` (see Report Writing Guidelines below)
 6. **Save Locally**: Use save_markdown_report() to save a permanent copy of the final report to the local 'research_outputs' directory.
 7. **Verify**: Read `/research_request.md` and confirm you've addressed all aspects with proper citations and structure
+8. **Offer to Save to JP BDC**: After completing the report, offer the user the option to save it to the JP BDC knowledge base. If the user accepts:
+- Read the content from `/final_report.md` to get the full report body
+- Use the `documents_manager()` tool with:
+- **action**: "create"
+- **title**: A descriptive title for the research (you determine based on the topic)
+- **tags**: Relevant tags for categorization (you determine based on the research topic)
+- **project_id**: 50 (Pesquisas)
+- **body**: The full content from `/final_report.md`
+- **author**: "agent" (default)
+- **status**: "published" (default)
 
 ## Research Planning Guidelines
 - Batch similar research tasks into a single TODO to minimize overhead

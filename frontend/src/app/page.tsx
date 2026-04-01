@@ -4,11 +4,11 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
 import { getConfig, saveConfig, StandaloneConfig } from "@/lib/config";
-import { ConfigDialog } from "@/app/components/ConfigDialog";
 import { Button } from "@/components/ui/button";
+import { AgentSelector } from "@/app/components/AgentSelector";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { ClientProvider, useClient } from "@/providers/ClientProvider";
-import { Settings, MessagesSquare, SquarePen, List } from "lucide-react";
+import { MessagesSquare, SquarePen, List } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -20,16 +20,12 @@ import { ChatInterface } from "@/app/components/ChatInterface";
 
 interface HomePageInnerProps {
   config: StandaloneConfig;
-  configDialogOpen: boolean;
-  setConfigDialogOpen: (open: boolean) => void;
-  handleSaveConfig: (config: StandaloneConfig) => void;
+  onAgentChange?: () => void;
 }
 
 function HomePageInner({
   config,
-  configDialogOpen,
-  setConfigDialogOpen,
-  handleSaveConfig,
+  onAgentChange,
 }: HomePageInnerProps) {
   const client = useClient();
   const [threadId, setThreadId] = useQueryState("threadId");
@@ -104,65 +100,67 @@ function HomePageInner({
   }, [fetchAssistant]);
 
   return (
-    <>
-      <ConfigDialog
-        open={configDialogOpen}
-        onOpenChange={setConfigDialogOpen}
-        onSave={handleSaveConfig}
-        initialConfig={config}
-      />
-      <div className="flex h-screen flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-border px-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold">Deep Agent UI</h1>
-            {!sidebar && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebar("1")}
-                className="rounded-md border border-border bg-card p-3 text-foreground hover:bg-accent"
-              >
-                <MessagesSquare className="mr-2 h-4 w-4" />
-                Threads
-                {interruptCount > 0 && (
-                  <span className="ml-2 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">
-                    {interruptCount}
-                  </span>
-                )}
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium">Assistant:</span>{" "}
-              {config.assistantId}
-            </div>
-            <Link href="/threads">
-              <Button variant="outline" size="sm">
-                <List className="mr-2 h-4 w-4" />
-                All Threads
-              </Button>
-            </Link>
+    <div className="flex h-screen flex-col">
+      <header className="flex h-16 items-center justify-between border-b border-border px-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold">Deep Agent UI</h1>
+          {!sidebar && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => setConfigDialogOpen(true)}
+              onClick={() => setSidebar("1")}
+              className="rounded-md border border-border bg-card p-3 text-foreground hover:bg-accent"
             >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
+              <MessagesSquare className="mr-2 h-4 w-4" />
+              Threads
+              {interruptCount > 0 && (
+                <span className="ml-2 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">
+                  {interruptCount}
+                </span>
+              )}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setThreadId(null)}
-              disabled={!threadId}
-              className="border-[#2F6868] bg-[#2F6868] text-white hover:bg-[#2F6868]/80"
-            >
-              <SquarePen className="mr-2 h-4 w-4" />
-              New Thread
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Backend URL"
+            defaultValue={config?.deploymentUrl || ""}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const newUrl = e.currentTarget.value;
+                saveConfig({ ...config, deploymentUrl: newUrl });
+                setConfig({ ...config, deploymentUrl: newUrl });
+                setAgentChangeCounter((c) => c + 1);
+              }
+            }}
+            className="h-8 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            style={{ width: "200px" }}
+          />
+          <AgentSelector
+            onAgentChange={() => {
+              onAgentChange?.();
+              setThreadId(null);
+            }}
+          />
+          <Link href="/threads">
+            <Button variant="outline" size="sm">
+              <List className="mr-2 h-4 w-4" />
+              All Threads
             </Button>
-          </div>
-        </header>
+          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setThreadId(null)}
+            disabled={!threadId}
+            className="border-[#2F6868] bg-[#2F6868] text-white hover:bg-[#2F6868]/80"
+          >
+            <SquarePen className="mr-2 h-4 w-4" />
+            New Thread
+          </Button>
+        </div>
+      </header>
 
         <div className="flex-1 overflow-hidden">
           <ResizablePanelGroup
@@ -206,39 +204,44 @@ function HomePageInner({
           </ResizablePanelGroup>
         </div>
       </div>
-    </>
   );
 }
 
+// const DEFAULT_BACKEND_URL = "http://localhost:8101"; //Backend Langgraph
+const DEFAULT_BACKEND_URL = "http://localhost:8102"; // Backend FastAPI
+
 function HomePageContent() {
   const [config, setConfig] = useState<StandaloneConfig | null>(null);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [assistantId, setAssistantId] = useQueryState("assistantId");
+  const [agentChangeCounter, setAgentChangeCounter] = useState(0);
+  const [, setAssistantId] = useQueryState("assistantId");
 
-  // On mount, check for saved config, otherwise show config dialog
   useEffect(() => {
     const savedConfig = getConfig();
-    if (savedConfig) {
-      setConfig(savedConfig);
-      if (!assistantId) {
-        setAssistantId(savedConfig.assistantId);
-      }
+    let configToUse: StandaloneConfig;
+
+    if (savedConfig && savedConfig.assistantId) {
+      configToUse = savedConfig;
     } else {
-      setConfigDialogOpen(true);
+      configToUse = {
+        deploymentUrl: DEFAULT_BACKEND_URL,
+        assistantId: "",
+      };
+      saveConfig(configToUse);
+    }
+
+    setConfig(configToUse);
+    if (configToUse.assistantId) {
+      setAssistantId(configToUse.assistantId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // If config changes, update the assistantId
-  useEffect(() => {
-    if (config && !assistantId) {
-      setAssistantId(config.assistantId);
+  const handleAgentChange = useCallback(() => {
+    const savedConfig = getConfig();
+    if (savedConfig) {
+      setConfig({ ...savedConfig });
+      setAgentChangeCounter((c) => c + 1);
     }
-  }, [config, assistantId, setAssistantId]);
-
-  const handleSaveConfig = useCallback((newConfig: StandaloneConfig) => {
-    saveConfig(newConfig);
-    setConfig(newConfig);
   }, []);
 
   const langsmithApiKey =
@@ -246,27 +249,9 @@ function HomePageContent() {
 
   if (!config) {
     return (
-      <>
-        <ConfigDialog
-          open={configDialogOpen}
-          onOpenChange={setConfigDialogOpen}
-          onSave={handleSaveConfig}
-        />
-        <div className="flex h-screen items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Welcome to Standalone Chat</h1>
-            <p className="mt-2 text-muted-foreground">
-              Configure your deployment to get started
-            </p>
-            <Button
-              onClick={() => setConfigDialogOpen(true)}
-              className="mt-4"
-            >
-              Open Configuration
-            </Button>
-          </div>
-        </div>
-      </>
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
     );
   }
 
@@ -274,12 +259,11 @@ function HomePageContent() {
     <ClientProvider
       deploymentUrl={config.deploymentUrl}
       apiKey={langsmithApiKey}
+      key={agentChangeCounter}
     >
       <HomePageInner
         config={config}
-        configDialogOpen={configDialogOpen}
-        setConfigDialogOpen={setConfigDialogOpen}
-        handleSaveConfig={handleSaveConfig}
+        onAgentChange={handleAgentChange}
       />
     </ClientProvider>
   );

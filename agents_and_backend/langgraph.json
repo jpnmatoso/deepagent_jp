@@ -2,7 +2,8 @@
   "dependencies": ["."],
   "graphs": {
     "planning": "./src/agent/planning_graph.py:graph",
-    "research": "./src/agent/research_graph.py:graph"
+    "research": "./src/agent/research_graph.py:graph",
+    "simple": "./src/agent/simpleagent_graph.py:graph"
   },
   "env": ".env",
   "http": {
