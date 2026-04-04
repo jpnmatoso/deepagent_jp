@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from routes import assistants, threads, runs
+from storage import init_postgres
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Backend FastAPI starting up...")
+    await init_postgres()
     yield
     print("Backend FastAPI shutting down...")
 

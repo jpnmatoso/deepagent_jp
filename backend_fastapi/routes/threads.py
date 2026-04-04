@@ -1,9 +1,30 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Any
+from uuid import uuid4
 from models import Thread, ThreadCreate, ThreadUpdate
 from storage import storage
 
 router = APIRouter(prefix="/threads", tags=["threads"])
+
+
+def _ensure_message_id(msg: dict) -> dict:
+    if not msg.get("id"):
+        msg["id"] = str(uuid4())
+    return msg
+
+
+def _normalize_message_type(msg_type: str) -> str:
+    type_map = {
+        "AIMessageChunk": "ai",
+        "HumanMessage": "human",
+        "SystemMessage": "system",
+        "ToolMessage": "tool",
+        "ai": "ai",
+        "human": "human",
+        "system": "system",
+        "tool": "tool",
+    }
+    return type_map.get(msg_type, msg_type.lower() if msg_type else "ai")
 
 
 def _consolidate_messages(messages: list) -> list[dict[str, Any]]:
@@ -12,7 +33,10 @@ def _consolidate_messages(messages: list) -> list[dict[str, Any]]:
         if not isinstance(msg, dict):
             result.append(msg)
             continue
+
+        msg = _ensure_message_id(msg)
         msg_type = msg.get("type", "")
+
         if msg_type == "AIMessageChunk":
             if result and result[-1].get("id") == msg.get("id"):
                 prev = result[-1]
@@ -33,20 +57,21 @@ def _consolidate_messages(messages: list) -> list[dict[str, Any]]:
                     "response_metadata": msg.get("response_metadata", {}),
                     "type": "ai",
                     "name": msg.get("name"),
-                    "id": msg.get("id"),
+                    "id": msg["id"],
                     "tool_calls": msg.get("tool_calls", []),
                     "invalid_tool_calls": msg.get("invalid_tool_calls", []),
                     "usage_metadata": msg.get("usage_metadata"),
                 }
                 result.append(consolidated)
         else:
+            msg["type"] = _normalize_message_type(msg_type)
             result.append(msg)
     return result
 
 
 @router.post("")
 async def create_thread(data: ThreadCreate | None = None) -> dict[str, Any]:
-    thread = storage.create_thread(data)
+    thread = await storage.create_thread(data)
     return {
         "thread_id": thread.thread_id,
         "created_at": thread.created_at.isoformat(),
@@ -63,8 +88,43 @@ async def list_threads(
     offset: int = Query(0),
     status: str | None = Query(None),
 ) -> list[dict[str, Any]]:
+    threads = await storage.list_threads(
+        limit=limit,
+        offset=offset,
+        status=status,
+        metadata_filter=None,
+    )
+    return [
+        {
+            "thread_id": t.thread_id,
+            "created_at": t.created_at.isoformat(),
+            "updated_at": t.updated_at.isoformat(),
+            "metadata": t.metadata,
+            "status": t.status,
+            "values": t.values.model_dump()
+            if hasattr(t.values, "model_dump")
+            else t.values,
+        }
+        for t in threads
+    ]
+
+
+@router.post("/search")
+async def search_threads(
+    body: dict[str, Any] | None = Body(None),
+) -> list[dict[str, Any]]:
+    limit = 20
+    offset = 0
+    status = None
     metadata_filter = None
-    threads = storage.list_threads(
+
+    if body:
+        limit = int(body.get("limit", 20))
+        offset = int(body.get("offset", 0))
+        status = body.get("status")
+        metadata_filter = body.get("metadata")
+
+    threads = await storage.list_threads(
         limit=limit,
         offset=offset,
         status=status,
@@ -85,37 +145,9 @@ async def list_threads(
     ]
 
 
-@router.post("/search")
-async def search_threads(
-    limit: int = Query(20, le=100),
-    offset: int = Query(0),
-    status: str | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> list[dict[str, Any]]:
-    threads = storage.list_threads(
-        limit=limit,
-        offset=offset,
-        status=status,
-        metadata_filter=metadata,
-    )
-    return [
-        {
-            "thread_id": t.thread_id,
-            "created_at": t.created_at.isoformat(),
-            "updated_at": t.updated_at.isoformat(),
-            "metadata": t.metadata,
-            "status": t.status,
-            "values": t.values.model_dump()
-            if hasattr(t.values, "model_dump")
-            else t.values,
-        }
-        for t in threads
-    ]
-
-
 @router.get("/{thread_id}")
 async def get_thread(thread_id: str) -> dict[str, Any]:
-    thread = storage.get_thread(thread_id)
+    thread = await storage.get_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
     return {
@@ -133,7 +165,7 @@ async def get_thread(thread_id: str) -> dict[str, Any]:
 
 @router.patch("/{thread_id}")
 async def update_thread(thread_id: str, data: ThreadUpdate) -> dict[str, Any]:
-    thread = storage.update_thread(thread_id, data.metadata)
+    thread = await storage.update_thread(thread_id, data.metadata)
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
     return {
@@ -147,7 +179,7 @@ async def update_thread(thread_id: str, data: ThreadUpdate) -> dict[str, Any]:
 
 @router.get("/{thread_id}/state")
 async def get_thread_state(thread_id: str) -> dict[str, Any]:
-    thread = storage.get_thread(thread_id)
+    thread = await storage.get_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
 
@@ -158,8 +190,12 @@ async def get_thread_state(thread_id: str) -> dict[str, Any]:
 
     thread_id_clean = thread_id.replace("-", "")[:8]
 
+    history = await storage.get_history(thread_id, limit=1, offset=0)
+
     messages_list = []
-    if hasattr(thread.values, "messages"):
+    if history and "values" in history[0] and "messages" in history[0]["values"]:
+        messages_list = history[0]["values"]["messages"]
+    elif hasattr(thread.values, "messages"):
         for msg in thread.values.messages:
             if isinstance(msg, dict):
                 messages_list.append(
@@ -180,13 +216,26 @@ async def get_thread_state(thread_id: str) -> dict[str, Any]:
 
     messages_list = _consolidate_messages(messages_list)
 
+    next_nodes = []
+    if history:
+        next_nodes = history[0].get("next", [])
+
+    todos = []
+    files = {}
+    if history and "values" in history[0]:
+        todos = history[0]["values"].get("todos", [])
+        files = history[0]["values"].get("files", {})
+    elif hasattr(thread.values, "todos"):
+        todos = thread.values.todos
+        files = thread.values.files if hasattr(thread.values, "files") else {}
+
     return {
         "values": {
             "messages": messages_list,
-            "todos": thread.values.todos if hasattr(thread.values, "todos") else [],
-            "files": thread.values.files if hasattr(thread.values, "files") else {},
+            "todos": todos,
+            "files": files,
         },
-        "next": [],
+        "next": next_nodes,
         "tasks": [],
         "metadata": {
             "thread_id": thread_id,
@@ -216,11 +265,11 @@ async def get_thread_history_get(
     limit: int = Query(10),
     offset: int = Query(0),
 ) -> list[dict[str, Any]]:
-    thread = storage.get_thread(thread_id)
+    thread = await storage.get_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
 
-    history = storage.get_history(thread_id, limit=limit, offset=offset)
+    history = await storage.get_history(thread_id, limit=limit, offset=offset)
     if not history:
         thread_id_clean = thread_id.replace("-", "")[:8]
         return [
@@ -262,14 +311,19 @@ async def get_thread_history_get(
 @router.post("/{thread_id}/history")
 async def get_thread_history_post(
     thread_id: str,
-    limit: int = Query(10),
-    offset: int = Query(0),
+    body: dict[str, Any] | None = Body(None),
 ) -> list[dict[str, Any]]:
-    thread = storage.get_thread(thread_id)
+    thread = await storage.get_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
 
-    history = storage.get_history(thread_id, limit=limit, offset=offset)
+    limit = 10
+    offset = 0
+    if body:
+        limit = int(body.get("limit", 10))
+        offset = int(body.get("offset", 0))
+
+    history = await storage.get_history(thread_id, limit=limit, offset=offset)
     if not history:
         thread_id_clean = thread_id.replace("-", "")[:8]
         return [
@@ -313,7 +367,7 @@ async def update_thread_state(
     thread_id: str,
     values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    thread = storage.update_state(thread_id, values)
+    thread = await storage.update_state(thread_id, values)
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
 

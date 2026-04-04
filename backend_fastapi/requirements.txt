@@ -7,3 +7,5 @@ langgraph
 deepagents
 langchain-openai
 httpx
+asyncpg
+langgraph-checkpoint-postgres
