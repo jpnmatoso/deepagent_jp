@@ -52,9 +52,8 @@ research_sub_agent = {
     "tools": [tavily_search, think_tool, save_markdown_report],
 }
 
-model = init_chat_model(
-    "stepfun/step-3.5-flash:free", model_provider="openai", temperature=0.0
-)
+# model = init_chat_model("stepfun/step-3.5-flash:free", model_provider="openai", temperature=0.0)
+model = init_chat_model("stepfun/step-3.5-flash", model_provider="openai", temperature=0.0)
 
 graph = create_deep_agent(
     model=model,

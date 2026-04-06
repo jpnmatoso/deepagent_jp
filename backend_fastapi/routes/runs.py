@@ -10,6 +10,14 @@ from fastapi.responses import StreamingResponse
 import json
 import time
 
+from langchain_core.messages import (
+    HumanMessage,
+    AIMessage,
+    SystemMessage,
+    ToolMessage,
+    AIMessageChunk,
+)
+
 AGENTS_DIR = (
     Path(__file__).parent.parent.parent / "agents_and_backend" / "src" / "agent"
 )
@@ -79,7 +87,9 @@ def _serialize_msg(obj: Any) -> Any:
     elif isinstance(obj, (list, tuple)):
         return [_serialize_msg(i) for i in obj]
     elif isinstance(obj, dict):
-        result = {k: _serialize_msg(v) for k, v in obj.items()}
+        result = {}
+        for k, v in obj.items():
+            result[k] = _serialize_msg(v)
         if not result.get("id") and result.get("type") in (
             "human",
             "ai",
@@ -89,7 +99,82 @@ def _serialize_msg(obj: Any) -> Any:
         ):
             result["id"] = str(uuid4())
         return result
-    return str(obj)
+    return obj
+
+
+def _parse_json_if_str(val: Any) -> Any:
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return val
+
+
+def _dict_to_message(msg: dict[str, Any]) -> Any:
+    msg_type = msg.get("type", "").lower()
+    content = msg.get("content", "")
+    if isinstance(content, list):
+        content = [
+            c if isinstance(c, dict) else {"type": "text", "text": c} for c in content
+        ]
+    if msg_type in ("human", "humanmessage"):
+        return HumanMessage(content=content, id=msg.get("id"))
+    elif msg_type in ("ai", "aimessage", "aimessagechunk"):
+        kwargs: dict[str, Any] = {
+            "content": content,
+            "id": msg.get("id"),
+        }
+        # Process tool_calls: only keep those with valid structure
+        raw_tool_calls = msg.get("tool_calls") or []
+        valid_tc = []
+        for tc in raw_tool_calls:
+            if not isinstance(tc, dict):
+                continue
+            tc_id = tc.get("id")
+            tc_name = tc.get("name", "")
+            tc_args = tc.get("args", {})
+            # Ensure args is always a dict
+            if isinstance(tc_args, str):
+                tc_args = _parse_json_if_str(tc_args)
+            if not isinstance(tc_args, dict):
+                tc_args = {}
+            # Ensure name is a string
+            if not isinstance(tc_name, str):
+                tc_name = str(tc_name) if tc_name else ""
+            # Only keep if has valid id
+            if tc_id and isinstance(tc_id, str) and tc_id.strip():
+                valid_tc.append(
+                    {
+                        "name": tc_name,
+                        "args": tc_args,
+                        "id": tc_id,
+                        "type": tc.get("type", "tool_call"),
+                    }
+                )
+        if valid_tc:
+            kwargs["tool_calls"] = valid_tc
+        # Ensure metadata fields are dicts
+        for field in ["usage_metadata", "response_metadata", "additional_kwargs"]:
+            val = msg.get(field)
+            if val is not None:
+                parsed = _parse_json_if_str(val)
+                if isinstance(parsed, dict):
+                    kwargs[field] = parsed
+        return AIMessage(**kwargs)
+    elif msg_type in ("system", "systemmessage"):
+        return SystemMessage(content=content, id=msg.get("id"))
+    elif msg_type in ("tool", "toolmessage"):
+        tool_call_id = msg.get("tool_call_id")
+        if not tool_call_id or not isinstance(tool_call_id, str):
+            tool_call_id = msg.get("id", "") or str(uuid4())
+        return ToolMessage(content=content, tool_call_id=tool_call_id, id=msg.get("id"))
+    else:
+        return HumanMessage(content=content, id=msg.get("id"))
+
+
+def _dicts_to_messages(messages: list[dict[str, Any]]) -> list:
+    return [_dict_to_message(m) if isinstance(m, dict) else m for m in messages]
 
 
 def _consolidate_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -134,8 +219,29 @@ def _consolidate_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]
     return result
 
 
+class _NonSerializable:
+    pass
+
+
+def _make_serializable(obj: Any) -> Any:
+    """Recursively ensure all objects are JSON-serializable."""
+    if obj is None or isinstance(obj, (bool, int, float, str)):
+        return obj
+    if isinstance(obj, (list, tuple)):
+        return [_make_serializable(i) for i in obj]
+    if isinstance(obj, dict):
+        return {str(k): _make_serializable(v) for k, v in obj.items()}
+    # For any other type, convert to string
+    return str(obj)
+
+
 def _sse(event: str, data: Any) -> str:
-    return f"event: {event}\ndata: {json.dumps(data)}\r\n\r\n"
+    try:
+        safe_data = _make_serializable(data)
+        return f"event: {event}\ndata: {json.dumps(safe_data)}\r\n\r\n"
+    except Exception as e:
+        print(f"[SSE] JSON serialization error for event '{event}': {e}")
+        return f'event: error\ndata: {{"error": "SSE serialization failed: {str(e)}"}}\r\n\r\n'
 
 
 def _extract_messages(input: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -224,8 +330,20 @@ async def _stream_graph_with_checkpoints(
         }
 
     try:
+        graph_messages = _dicts_to_messages(all_messages)
+        print(f"[STREAM] Converting {len(all_messages)} messages to LangChain objects")
+        for i, gm in enumerate(graph_messages):
+            msg_type = type(gm).__name__
+            content_preview = ""
+            if hasattr(gm, "content"):
+                c = gm.content
+                if isinstance(c, str):
+                    content_preview = c[:80]
+                elif isinstance(c, list):
+                    content_preview = f"[list:{len(c)}]"
+            print(f"  msg[{i}] {msg_type}: {content_preview}")
         async for event in graph.astream(
-            {"messages": input_messages},
+            {"messages": graph_messages},
             config=stream_config,
             stream_mode="messages",
         ):
