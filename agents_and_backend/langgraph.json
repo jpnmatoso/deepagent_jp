@@ -1,5 +1,5 @@
 {
-  "dependencies": ["."],
+  "dependencies": [".", "./src/agent"],
   "graphs": {
     "planning": "./src/agent/planning_graph.py:graph",
     "research": "./src/agent/research_graph.py:graph",
