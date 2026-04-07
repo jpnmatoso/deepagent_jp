@@ -129,7 +129,21 @@ class InMemoryStorage:
         return thread
 
     async def get_thread(self, thread_id: str) -> Thread | None:
-        return self._threads.get(thread_id)
+        thread = self._threads.get(thread_id)
+        if not thread:
+            return None
+
+        checkpoints = self._checkpoints.get(thread_id, [])
+        if checkpoints:
+            last_checkpoint = checkpoints[-1]
+            if last_checkpoint.values.get("messages"):
+                thread.values.messages = last_checkpoint.values.get("messages", [])
+            if last_checkpoint.values.get("todos"):
+                thread.values.todos = last_checkpoint.values.get("todos", [])
+            if last_checkpoint.values.get("files"):
+                thread.values.files = last_checkpoint.values.get("files", {})
+
+        return thread
 
     async def list_threads(
         self,
@@ -353,13 +367,32 @@ class PostgresStorage:
             metadata = row["metadata"]
             if isinstance(metadata, str):
                 metadata = json.loads(metadata)
+
+            cp_row = await conn.fetchrow(
+                """SELECT checkpoint FROM checkpoints
+                   WHERE thread_id = $1
+                   ORDER BY checkpoint_id DESC LIMIT 1""",
+                thread_id,
+            )
+
+            messages = []
+            todos = []
+            files = {}
+            if cp_row:
+                checkpoint = cp_row["checkpoint"]
+                if isinstance(checkpoint, str):
+                    checkpoint = json.loads(checkpoint)
+                messages = checkpoint.get("messages", [])
+                todos = checkpoint.get("todos", [])
+                files = checkpoint.get("files", {})
+
             return Thread(
                 thread_id=row["thread_id"],
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
                 metadata=metadata or {},
                 status="idle",
-                values=ThreadState(),
+                values=ThreadState(messages=messages, todos=todos, files=files),
                 config={},
             )
 
@@ -659,6 +692,9 @@ class PostgresStorage:
 
     async def delete_thread(self, thread_id: str) -> bool:
         async with self._pool.acquire() as conn:
+            await conn.execute(
+                "DELETE FROM checkpoints WHERE thread_id = $1", thread_id
+            )
             result = await conn.execute(
                 "DELETE FROM threads_metadata WHERE thread_id = $1", thread_id
             )

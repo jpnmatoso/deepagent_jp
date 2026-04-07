@@ -4,8 +4,16 @@ import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
 import { format } from "date-fns";
-import { MessageSquare, ArrowLeft } from "lucide-react";
+import { MessageSquare, ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ThreadItem } from "@/app/hooks/useThreads";
 import { useThreads } from "@/app/hooks/useThreads";
+import { useDeleteThread } from "@/app/hooks/useDeleteThread";
 import { getConfig, StandaloneConfig } from "@/lib/config";
 import { ClientProvider } from "@/providers/ClientProvider";
 import type { Thread } from "@langchain/langgraph-sdk";
@@ -107,6 +116,8 @@ function EmptyState() {
 
 function ThreadListContent() {
   const [statusFilter, setStatusFilter] = useQueryState("status");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<ThreadItem | null>(null);
 
   const threads = useThreads({
     status: (statusFilter === "all" || !statusFilter) 
@@ -114,6 +125,21 @@ function ThreadListContent() {
       : statusFilter as Thread["status"],
     limit: 50,
   });
+
+  const deleteMutation = useDeleteThread();
+
+  const handleDeleteClick = (thread: ThreadItem) => {
+    setThreadToDelete(thread);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (threadToDelete) {
+      await deleteMutation.trigger(threadToDelete.id);
+      setDeleteDialogOpen(false);
+      setThreadToDelete(null);
+    }
+  };
 
   const flattened = useMemo(() => {
     return threads.data?.flat() ?? [];
@@ -217,39 +243,53 @@ function ThreadListContent() {
                   </h4>
                   <div className="flex flex-col gap-1">
                     {groupThreads.map((thread) => (
-                      <Link
+                      <div
                         key={thread.id}
-                        href={`/threads/${thread.id}`}
                         className={cn(
-                          "grid w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-200",
+                          "group flex w-full items-center gap-3 rounded-lg px-3 py-3 transition-colors duration-200",
                           "hover:bg-accent",
                           "border border-transparent bg-transparent"
                         )}
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-center justify-between">
-                            <h3 className="truncate text-sm font-semibold">
-                              {thread.title}
-                            </h3>
-                            <span className="ml-2 flex-shrink-0 text-xs text-muted-foreground">
-                              {formatTime(thread.updatedAt)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <p className="flex-1 truncate text-sm text-muted-foreground">
-                              {thread.description}
-                            </p>
-                            <div className="ml-2 flex-shrink-0">
-                              <div
-                                className={cn(
-                                  "h-2 w-2 rounded-full",
-                                  getThreadColor(thread.status)
-                                )}
-                              />
+                        <Link
+                          href={`/threads/${thread.id}`}
+                          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center justify-between">
+                              <h3 className="truncate text-sm font-semibold">
+                                {thread.title}
+                              </h3>
+                              <span className="ml-2 flex-shrink-0 text-xs text-muted-foreground">
+                                {formatTime(thread.updatedAt)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <p className="flex-1 truncate text-sm text-muted-foreground">
+                                {thread.description}
+                              </p>
+                              <div className="ml-2 flex-shrink-0">
+                                <div
+                                  className={cn(
+                                    "h-2 w-2 rounded-full",
+                                    getThreadColor(thread.status)
+                                  )}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteClick(thread);
+                          }}
+                          className="flex-shrink-0 rounded-md p-2 opacity-0 transition-opacity hover:bg-red-100 hover:text-red-600 group-hover:opacity-100"
+                          title="Delete thread"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -258,6 +298,32 @@ function ThreadListContent() {
           </div>
         )}
       </ScrollArea>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Thread</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{threadToDelete?.title}"? 
+              This will permanently delete the thread and all its messages.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isMutating}
+            >
+              {deleteMutation.isMutating ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

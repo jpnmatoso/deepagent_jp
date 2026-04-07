@@ -177,6 +177,13 @@ async def update_thread(thread_id: str, data: ThreadUpdate) -> dict[str, Any]:
     }
 
 
+@router.delete("/{thread_id}", status_code=204)
+async def delete_thread(thread_id: str) -> None:
+    deleted = await storage.delete_thread(thread_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
+
+
 @router.get("/{thread_id}/state")
 async def get_thread_state(thread_id: str) -> dict[str, Any]:
     thread = await storage.get_thread(thread_id)
