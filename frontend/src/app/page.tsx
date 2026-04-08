@@ -122,21 +122,6 @@ function HomePageInner({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Backend URL"
-            defaultValue={config?.deploymentUrl || ""}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const newUrl = e.currentTarget.value;
-                saveConfig({ ...config, deploymentUrl: newUrl });
-                setConfig({ ...config, deploymentUrl: newUrl });
-                setAgentChangeCounter((c) => c + 1);
-              }
-            }}
-            className="h-8 rounded-md border border-border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            style={{ width: "200px" }}
-          />
           <AgentSelector
             onAgentChange={() => {
               onAgentChange?.();
@@ -208,7 +193,7 @@ function HomePageInner({
 }
 
 // const DEFAULT_BACKEND_URL = "http://localhost:8101"; //Backend Langgraph
-const DEFAULT_BACKEND_URL = "http://localhost:8102"; // Backend FastAPI
+const DEFAULT_BACKEND_URL = process.env.NEXT_PUBLIC_DEPLOYMENT_URL || "http://localhost:8101"; // Backend FastAPI
 
 function HomePageContent() {
   const [config, setConfig] = useState<StandaloneConfig | null>(null);

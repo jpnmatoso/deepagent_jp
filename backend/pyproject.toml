@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepagents-backend"
+version = "1.0.0"
+description = "Deep Agents Backend - FastAPI + LangGraph Agents"
+requires-python = ">=3.11"
+dependencies = [
+    # FastAPI
+    "fastapi>=0.100.0",
+    "starlette>=0.27.0",
+    "uvicorn>=0.23.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "sse-starlette>=2.0.0",
+    
+    # LangGraph
+    "langgraph>=0.0.20",
+    "langgraph-checkpoint-postgres>=2.0.0",
+    
+    # LangChain
+    "langchain>=0.1.0",
+    "langchain-core>=0.1.0",
+    "langchain-openai>=0.1.0",
+    
+    # Agents
+    "deepagents>=0.4.0",
+    
+    # Utilities
+    "httpx>=0.24.0",
+    "asyncpg>=0.28.0",
+    "markdownify>=0.11.0",
+    "tavily>=0.2.0",
+    "typing-extensions>=4.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "langgraph-cli[inmem]>=0.1.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "api"}

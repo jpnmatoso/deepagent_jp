@@ -1,0 +1,33 @@
+services:
+  backend:
+    build: ./backend
+    container_name: deepagents-backend
+    ports:
+      - "8101:8000"
+    env_file:
+      - ./backend/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: deepagents-frontend
+    ports:
+      - "3101:3000"
+    environment:
+      - NEXT_PUBLIC_DEPLOYMENT_URL=http://backend:8000
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+    name: deepagents-network
