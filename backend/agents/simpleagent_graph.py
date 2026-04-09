@@ -35,9 +35,7 @@ def divide(a: int, b: int) -> float:
 tools = [add, multiply, divide]
 
 # Define LLM with bound tools
-# llm = ChatOpenAI(model="gpt-4o")
-# llm = ChatOpenAI(model="stepfun/step-3.5-flash", model_provider="openai", temperature=0.0)
-llm = init_chat_model(model="stepfun/step-3.5-flash:free", model_provider="openai", temperature=0.0)
+llm = init_chat_model(model="stepfun/step-3.5-flash", model_provider="openai", temperature=0.0)
 llm_with_tools = llm.bind_tools(tools)
 
 # System message

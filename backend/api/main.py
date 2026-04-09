@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routes import assistants, threads, runs
+from routes import assistants, threads, runs, auth
 from storage import init_postgres
 
 
@@ -32,6 +32,7 @@ app.add_middleware(
 app.include_router(assistants.router)
 app.include_router(threads.router)
 app.include_router(runs.router)
+app.include_router(auth.router)
 
 
 @app.get("/health")

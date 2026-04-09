@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AgentSelector } from "@/app/components/AgentSelector";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { ClientProvider, useClient } from "@/providers/ClientProvider";
-import { MessagesSquare, SquarePen, List } from "lucide-react";
+import { MessagesSquare, SquarePen, List, LogOut } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -17,6 +17,7 @@ import {
 import { ThreadList } from "@/app/components/ThreadList";
 import { ChatProvider } from "@/providers/ChatProvider";
 import { ChatInterface } from "@/app/components/ChatInterface";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface HomePageInnerProps {
   config: StandaloneConfig;
@@ -144,6 +145,7 @@ function HomePageInner({
             <SquarePen className="mr-2 h-4 w-4" />
             New Thread
           </Button>
+          <LogoutButton />
         </div>
       </header>
 
@@ -192,8 +194,22 @@ function HomePageInner({
   );
 }
 
-// const DEFAULT_BACKEND_URL = "http://localhost:8101"; //Backend Langgraph
-const DEFAULT_BACKEND_URL = process.env.NEXT_PUBLIC_DEPLOYMENT_URL || "http://localhost:8101"; // Backend FastAPI
+function LogoutButton() {
+  const { logout } = useAuth();
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={logout}
+      title="Sair"
+    >
+      <LogOut className="h-4 w-4" />
+    </Button>
+  );
+}
+
+const DEFAULT_BACKEND_URL = process.env.NEXT_PUBLIC_DEPLOYMENT_URL || "http://localhost:8101";
 
 function HomePageContent() {
   const [config, setConfig] = useState<StandaloneConfig | null>(null);
