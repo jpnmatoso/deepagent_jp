@@ -27,7 +27,7 @@ class ThreadState(BaseModel):
 class Thread(BaseModel):
     thread_id: str = Field(default_factory=lambda: str(uuid4()))
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime | None = Field(default_factory=datetime.utcnow)
     metadata: dict[str, Any] = Field(default_factory=dict)
     status: Literal["idle", "busy", "interrupted", "error", "running"] = "idle"
     values: ThreadState = Field(default_factory=ThreadState)

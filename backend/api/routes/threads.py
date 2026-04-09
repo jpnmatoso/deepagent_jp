@@ -75,7 +75,7 @@ async def create_thread(data: ThreadCreate | None = None) -> dict[str, Any]:
     return {
         "thread_id": thread.thread_id,
         "created_at": thread.created_at.isoformat(),
-        "updated_at": thread.updated_at.isoformat(),
+        "updated_at": thread.updated_at.isoformat() if thread.updated_at else None,
         "metadata": thread.metadata,
         "status": thread.status,
         "values": thread.values.model_dump(),
@@ -96,71 +96,45 @@ async def list_threads(
     )
     return [
         {
-            "thread_id": t.thread_id,
-            "created_at": t.created_at.isoformat(),
-            "updated_at": t.updated_at.isoformat(),
-            "metadata": t.metadata,
-            "status": t.status,
-            "values": t.values.model_dump()
-            if hasattr(t.values, "model_dump")
-            else t.values,
+            "thread_id": thread.thread_id,
+            "created_at": thread.created_at.isoformat(),
+            "updated_at": thread.updated_at.isoformat() if thread.updated_at else None,
+            "metadata": thread.metadata,
+            "status": thread.status,
+            "config": thread.config,
+            "values": thread.values.model_dump()
+            if hasattr(thread.values, "model_dump")
+            else thread.values,
         }
-        for t in threads
     ]
 
 
 @router.post("/search")
 async def search_threads(
-    body: dict[str, Any] | None = Body(None),
+    limit: int = Query(20, le=100),
+    offset: int = Query(0),
+    status: str | None = Query(None),
 ) -> list[dict[str, Any]]:
-    limit = 20
-    offset = 0
-    status = None
-    metadata_filter = None
-
-    if body:
-        limit = int(body.get("limit", 20))
-        offset = int(body.get("offset", 0))
-        status = body.get("status")
-        metadata_filter = body.get("metadata")
-
     threads = await storage.list_threads(
         limit=limit,
         offset=offset,
         status=status,
-        metadata_filter=metadata_filter,
+        metadata_filter=None,
     )
     return [
         {
             "thread_id": t.thread_id,
             "created_at": t.created_at.isoformat(),
-            "updated_at": t.updated_at.isoformat(),
+            "updated_at": t.updated_at.isoformat() if t.updated_at else None,
             "metadata": t.metadata,
             "status": t.status,
+            "config": t.config,
             "values": t.values.model_dump()
             if hasattr(t.values, "model_dump")
             else t.values,
         }
         for t in threads
     ]
-
-
-@router.get("/{thread_id}")
-async def get_thread(thread_id: str) -> dict[str, Any]:
-    thread = await storage.get_thread(thread_id)
-    if not thread:
-        raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
-    return {
-        "thread_id": thread.thread_id,
-        "created_at": thread.created_at.isoformat(),
-        "updated_at": thread.updated_at.isoformat(),
-        "metadata": thread.metadata,
-        "status": thread.status,
-        "config": thread.config,
-        "values": thread.values.model_dump()
-        if hasattr(thread.values, "model_dump")
-        else thread.values,
-    }
 
 
 @router.patch("/{thread_id}")
@@ -171,9 +145,27 @@ async def update_thread(thread_id: str, data: ThreadUpdate) -> dict[str, Any]:
     return {
         "thread_id": thread.thread_id,
         "created_at": thread.created_at.isoformat(),
-        "updated_at": thread.updated_at.isoformat(),
+        "updated_at": thread.updated_at.isoformat() if thread.updated_at else None,
         "metadata": thread.metadata,
         "status": thread.status,
+    }
+
+
+@router.get("/{thread_id}")
+async def get_thread(thread_id: str) -> dict[str, Any]:
+    thread = await storage.get_thread(thread_id)
+    if not thread:
+        raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
+    return {
+        "thread_id": thread.thread_id,
+        "created_at": thread.created_at.isoformat(),
+        "updated_at": thread.updated_at.isoformat() if thread.updated_at else None,
+        "metadata": thread.metadata,
+        "status": thread.status,
+        "config": thread.config,
+        "values": thread.values.model_dump()
+        if hasattr(thread.values, "model_dump")
+        else thread.values,
     }
 
 

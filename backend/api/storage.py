@@ -297,7 +297,7 @@ class PostgresStorage:
     """PostgreSQL storage using the existing LangGraph server schema.
 
     Tables used:
-    - threads_metadata: thread_id, created_at, updated_at, metadata
+    - threads: thread_id, created_at, updated_at, metadata
     - checkpoints: thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, type, checkpoint (jsonb), metadata (jsonb)
     """
 
@@ -323,7 +323,7 @@ class PostgresStorage:
         )
         async with self._pool.acquire() as conn:
             await conn.execute(
-                """INSERT INTO threads_metadata (thread_id, created_at, updated_at, metadata)
+                """INSERT INTO threads (thread_id, created_at, updated_at, metadata)
                    VALUES ($1, $2, $3, $4)
                    ON CONFLICT (thread_id) DO NOTHING""",
                 thread_id,
@@ -360,7 +360,7 @@ class PostgresStorage:
     async def get_thread(self, thread_id: str) -> Thread | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT * FROM threads_metadata WHERE thread_id = $1", thread_id
+                "SELECT * FROM threads WHERE thread_id = $1", thread_id
             )
             if not row:
                 return None
@@ -403,7 +403,7 @@ class PostgresStorage:
         status: str | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> list[Thread]:
-        query = "SELECT * FROM threads_metadata"
+        query = "SELECT * FROM threads"
         conditions = []
         params: list = []
         param_idx = 1
@@ -487,7 +487,9 @@ class PostgresStorage:
             param_idx += 1
             thread.metadata.update(metadata)
 
-        query = f"UPDATE threads_metadata SET {', '.join(updates)} WHERE thread_id = $1 RETURNING *"
+        query = (
+            f"UPDATE threads SET {', '.join(updates)} WHERE thread_id = $1 RETURNING *"
+        )
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(query, *params)
             if row:
@@ -514,7 +516,7 @@ class PostgresStorage:
         thread.updated_at = datetime.utcnow()
         async with self._pool.acquire() as conn:
             await conn.execute(
-                "UPDATE threads_metadata SET updated_at = NOW() WHERE thread_id = $1",
+                "UPDATE threads SET updated_at = NOW() WHERE thread_id = $1",
                 thread_id,
             )
         return thread
@@ -696,7 +698,7 @@ class PostgresStorage:
                 "DELETE FROM checkpoints WHERE thread_id = $1", thread_id
             )
             result = await conn.execute(
-                "DELETE FROM threads_metadata WHERE thread_id = $1", thread_id
+                "DELETE FROM threads WHERE thread_id = $1", thread_id
             )
             return result.split()[-1] != "0"
 
