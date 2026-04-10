@@ -96,16 +96,17 @@ async def list_threads(
     )
     return [
         {
-            "thread_id": thread.thread_id,
-            "created_at": thread.created_at.isoformat(),
-            "updated_at": thread.updated_at.isoformat() if thread.updated_at else None,
-            "metadata": thread.metadata,
-            "status": thread.status,
-            "config": thread.config,
-            "values": thread.values.model_dump()
-            if hasattr(thread.values, "model_dump")
-            else thread.values,
+            "thread_id": t.thread_id,
+            "created_at": t.created_at.isoformat(),
+            "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+            "metadata": t.metadata,
+            "status": t.status,
+            "config": t.config,
+            "values": t.values.model_dump()
+            if hasattr(t.values, "model_dump")
+            else t.values,
         }
+        for t in threads
     ]
 
 
