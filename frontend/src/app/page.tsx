@@ -210,7 +210,7 @@ function LogoutButton() {
 }
 
 const DEFAULT_BACKEND_URL = process.env.NEXT_PUBLIC_DEPLOYMENT_URL
-  ? `${window.location.protocol}//${window.location.host}`
+  ? `${window.location.protocol}//${window.location.host}/api/lg`
   : "http://localhost:8101";
 
 function HomePageContent() {
