@@ -14,7 +14,7 @@ from langchain.chat_models import init_chat_model
 from deepagents import create_deep_agent
 from dotenv import load_dotenv
 
-load_dotenv(AGENT_DIR.parent / ".env")
+load_dotenv(AGENT_DIR / ".env")
 
 PROMPTS_DIR = AGENT_DIR / "agents" / "prompts"
 RESEARCH_WORKFLOW_PATH = PROMPTS_DIR / "research_agent_system_prompt.md"

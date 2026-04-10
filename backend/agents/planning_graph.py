@@ -14,7 +14,7 @@ from deepagents import create_deep_agent
 from deepagents.backends import CompositeBackend, FilesystemBackend
 from dotenv import load_dotenv
 
-load_dotenv(AGENT_DIR.parent / ".env")
+load_dotenv(AGENT_DIR / ".env")
 
 PROMPTS_DIR = AGENT_DIR / "agents" / "prompts"
 PLANNING_PROMPT_PATH = PROMPTS_DIR / "planning_agent_system_prompt.md"
