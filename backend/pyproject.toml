@@ -34,6 +34,10 @@ dependencies = [
     "markdownify>=0.11.0",
     "tavily>=0.2.0",
     "typing-extensions>=4.5.0",
+    
+    # Auth
+    "python-jose[cryptography]>=3.3.0",
+    "bcrypt>=4.0.0",
 ]
 
 [project.optional-dependencies]

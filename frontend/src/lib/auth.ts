@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8100";
+const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8101";
 const COOKIE_NAME = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || "deepagents_token";
 
 export interface LoginCredentials {

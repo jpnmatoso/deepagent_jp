@@ -1,6 +1,11 @@
 #!/bin/bash
 
-cd "$(dirname "$0")/api"
+cd "$(dirname "$0")"
+
+# Ativar virtualenv
+source ../.venv/bin/activate
+
+cd api
 
 set -a
 source ../.env

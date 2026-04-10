@@ -21,13 +21,12 @@ services:
     ports:
       - "3101:3000"
     environment:
-      - NEXT_PUBLIC_DEPLOYMENT_URL=http://backend:8000
+      - BACKEND_API_URL=http://backend:8000
+      - NEXT_PUBLIC_DEPLOYMENT_URL=http://localhost:3101
+      - NEXT_PUBLIC_AUTH_URL=http://localhost:3101
+      - NEXT_PUBLIC_AUTH_COOKIE_NAME=deepagents_token
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    env_file:
-      - ./backend/.env
-    depends_on:
-      - backend
     restart: unless-stopped
 
 networks:

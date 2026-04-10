@@ -13,10 +13,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkAuth = () => {
-      // Auth bypassed for migration testing
-      setIsChecking(false);
-      return;
-      
       const authenticated = isAuthenticated();
       
       if (!authenticated) {

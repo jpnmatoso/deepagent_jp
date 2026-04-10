@@ -9,3 +9,5 @@ langchain-openai
 httpx
 asyncpg
 langgraph-checkpoint-postgres
+python-jose[cryptography]
+passlib[bcrypt]
